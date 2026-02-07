@@ -1,0 +1,129 @@
+enum PlayerRole {
+    X
+    O
+}
+
+type Player {
+    id: ID!
+
+    """ The Role the user is Playing as. """
+    role: PlayerRole!
+
+    """ The Plaintext Name of the Player """
+    name: String!
+
+}
+
+type Game {
+    id: ID!
+
+    """ The current player role who is allowed to make actions. """
+    currentPlayer: PlayerRole!
+
+    """ All the players in the lobby i.e. what role they are usually only 2 but can support more. """
+    players: [Player!]!
+
+    """ The player role that has Won!! """
+    winner: PlayerRole
+    
+    """ Whether or not game is over. """
+    gameOver: Boolean!
+
+    """ Boards will always be 9 long array representing 3x3 square. """
+    board: [PlayerRole]!
+}
+
+type User {
+    id: ID!
+}
+
+type Query {
+
+    """ Fetches All Games in the API """
+    games: [Game!]!
+    
+    """ Fetches Specific Game Instance if Exists """
+    game(gameId: ID!): Game
+
+    me: User
+}
+
+type UpdateGameResponse {
+    
+    """ The Current Accepted State if Accepted otherwise null. """
+    state: GameState
+
+    """ Any Validation Errors that Occured during the process """
+    errors: [String!]!
+    
+}
+
+type CreateGameResponse {
+    """ Newly Created and Registered Game. """
+    game: Game
+    
+    """ List of errors from the creation of the Game. """
+    errors: [String!]!
+}
+
+type JoinGameResponse {
+    
+    """ Game you just joined. """
+    game: Game
+
+    """ List of errors from trying ot join a Game. """
+    errors: [String!]!
+    
+}
+
+input PlayerInput {
+    id: ID!
+
+    """ The Role the user is Playing as. """
+    role: PlayerRole!
+
+    """ The Plaintext Name of the Player """
+    name: String!
+}
+
+type Mutation {
+    # Consider a game reset function...
+
+    """ Starting a New Game. """
+    startGame(players: [PlayerInput!]!): CreateGameResponse
+    
+    """ Join an existing Game. """
+    joinGame(gameId: ID!, player: PlayerInput!): JoinGameResponse
+    
+    """ Try and Apply Gamestate to Game And Return Result """
+    applyGameState(newState: GameStateInput): UpdateGameResponse
+    
+}
+
+input GameStateInput {
+    id: ID!
+
+    """ The specific index we will update """
+    index: Int
+}
+
+type GameState {
+    id: ID!
+
+    """ The Current Playing Role to Transition to. """
+    currentPlayer: PlayerRole!
+
+    """ The new Board State. """
+    board: [PlayerRole]!
+
+    """ The current Winner if winner selected. """
+    winner: PlayerRole
+    
+    """ bool recording game over. """
+    gameOver: Boolean!
+}
+
+type Subscription {
+    """ Streamline Events of a Game As They are Applied """
+    gameUpdates(gameId: ID!): GameState
+}

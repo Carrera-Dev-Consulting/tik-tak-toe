@@ -1,0 +1,10 @@
+ariadne
+broadcaster
+redis
+fastapi
+uvicorn
+pydantic-settings
+pymongo
+python-json-logger
+colorlog
+itsdangerous
