@@ -90,10 +90,10 @@ type Mutation {
     # Consider a game reset function...
 
     """ Starting a New Game. """
-    startGame(players: [PlayerInput!]!): CreateGameResponse
+    startGame(name: String!): CreateGameResponse
     
     """ Join an existing Game. """
-    joinGame(gameId: ID!, player: PlayerInput!): JoinGameResponse
+    joinGame(gameId: ID!, name: String!, role: PlayerRole!): JoinGameResponse
     
     """ Try and Apply Gamestate to Game And Return Result """
     applyGameState(newState: GameStateInput): UpdateGameResponse
@@ -125,5 +125,8 @@ type GameState {
 
 type Subscription {
     """ Streamline Events of a Game As They are Applied """
-    gameUpdates(gameId: ID!): GameState
+    gameUpdates(gameId: ID!): GameState!
+
+    """ Stream of updates when lobby players change... """
+    lobbyUpdate(gameId: ID!): [Player!]!
 }

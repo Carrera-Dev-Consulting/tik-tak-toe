@@ -229,8 +229,14 @@ mutation = MutationType()
 
 
 @mutation.field("startGame")
-async def start_game(_, info: GraphQLResolveInfo, players: list[dict]):
-    players_obj = [Player.model_validate(player) for player in players]
+async def start_game(_, info: GraphQLResolveInfo, name: str):
+    players_obj = [
+        Player(
+            id=info.context["user_id"],
+            name=name,
+            role=PlayerRole.X,
+        ),
+    ]
     client: AsyncMongoClient = info.context["mongo"]
 
     ids = {}
@@ -262,9 +268,20 @@ async def start_game(_, info: GraphQLResolveInfo, players: list[dict]):
 
 
 @mutation.field("joinGame")
-async def join_game(_, info: GraphQLResolveInfo, gameId: str, player: dict):
+async def join_game(
+    _,
+    info: GraphQLResolveInfo,
+    gameId: str,
+    name: str,
+    role: PlayerRole,
+):
+    broadcast: Broadcast = info.context["broadcast"]
     client: AsyncMongoClient = info.context["mongo"]
-    player_obj = Player.model_validate(player)
+    player_obj = Player(
+        id=info.context["user_id"],
+        role=role,
+        name=name,
+    )
 
     game: Game = await get_single_game(None, info, gameId)
 
@@ -287,8 +304,15 @@ async def join_game(_, info: GraphQLResolveInfo, gameId: str, player: dict):
         {"$addToSet": {"players": player_obj.model_dump(mode="json")}},
     )
 
+    updated_game: Game = await get_single_game(None, info, gameId)
+
+    await broadcast.publish(
+        f"players:{gameId}",
+        json.dumps([player.model_dump(mode="json") for player in updated_game.players]),
+    )
+
     return {
-        "game": await get_single_game(None, info, gameId),
+        "game": updated_game,
         "errors": [],
     }
 
@@ -379,6 +403,24 @@ async def game_updates(
 @subscription.field("gameUpdates")
 def game_updates(message: dict, info: GraphQLResolveInfo, gameId: str):
     # No need to do anything extra yet.
+    return message
+
+
+@subscription.source("lobbyUpdate")
+async def session_updates(_, info: GraphQLResolveInfo, gameId: str):
+    game = await get_single_game(None, info, gameId)
+    if game is None:
+        return
+
+    broadcast: Broadcast = info.context["broadcast"]
+    async with broadcast.subscribe(f"players:{gameId}") as subscriber:
+        async for event in subscriber:
+            event: Event = event
+            yield json.loads(event.message)
+
+
+@subscription.field("lobbyUpdate")
+def session_update(message: list[dict], info: GraphQLResolveInfo, gameId: str):
     return message
 
 

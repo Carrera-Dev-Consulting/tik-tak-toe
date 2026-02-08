@@ -9,12 +9,16 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@apollo/client": "^4.1.4",
     "@react-router/node": "7.12.0",
     "@react-router/serve": "7.12.0",
+    "graphql": "^16.12.0",
+    "graphql-ws": "^6.0.7",
     "isbot": "^5.1.31",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router": "7.12.0"
+    "react-router": "7.12.0",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@react-router/dev": "7.12.0",
