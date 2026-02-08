@@ -21,14 +21,10 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
     const [gameState, setGameState] = useState<GameState | undefined>(undefined);
     const [userId, setUserId] = useState<ID | null>(null);
     const role = useMemo(() => {
-        console.log("game", game);
-        console.log("userId", userId);
         let player = game?.players.find((player) => player.id === userId);
-        console.log(player);
         return player?.role
     }, [game, userId]);
 
-    console.log(role);
     useEffect(() => {
         let unsubCallback: () => void;
         const setup = async () => {
@@ -42,13 +38,10 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
                     setError(error.message);
                 },
             )
-            console.log("gameId", gameId);
-            let game = await api.getGame(gameId)
+            let game = await api.getGame(gameId);
             setGame(game);
-            console.log("game", game);
             setGameState(game as GameState);
-            const id = await api.me()
-            console.log("userId", id)
+            const id = await api.me();
             setUserId(id);
             setLoading(false);
         };
@@ -95,6 +88,8 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
     }
 
     return (
-        <GameComponent identity={role} {...gameState} />
+        <GameComponent identity={role} {...gameState} onClick={async (index) => {
+            await api.selectSquare(gameId, index);
+        }} resetDisabled />
     );
 }

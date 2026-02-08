@@ -12,6 +12,7 @@ import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { getEnvVariable } from "~/util";
 import { createClient } from "graphql-ws";
+import type { FetchPolicy } from "@apollo/client";
 
 const GET_GAME = gql`
   query Game($gameId: ID!) {
@@ -145,6 +146,7 @@ export class GQLAPI implements TikTakAPI {
     const httpAPIHost = getEnvVariable("GQL_API_URL", "/graphql");
     const httpLink = new HttpLink({
       uri: httpAPIHost as string,
+      credentials: "include",
     });
 
     const wsAPIHost = getEnvVariable("GQL_WS_URL", "/graphql");
@@ -183,10 +185,12 @@ export class GQLAPI implements TikTakAPI {
   async queryClient<T>(
     query: DocumentNode,
     variables: Record<string, any>,
+    fetchPolicy: FetchPolicy | undefined = 'cache-first',
   ): Promise<T> {
     const { data, error } = await this.apollo.query<T>({
       query,
       variables,
+      fetchPolicy: fetchPolicy
     });
 
     if (error) {
@@ -219,13 +223,13 @@ export class GQLAPI implements TikTakAPI {
   }
 
   async me(): Promise<ID> {
-    const { me } = await this.queryClient<MeResponse>(ME, {});
+    const { me } = await this.queryClient<MeResponse>(ME, {}, 'no-cache');
     return me.id;
   }
   async getGame(id: ID): Promise<Game | undefined> {
     const { game } = await this.queryClient<GameResponse>(GET_GAME, {
       gameId: id,
-    });
+    }, 'cache-first');
 
     return game;
   }

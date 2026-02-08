@@ -322,11 +322,7 @@ async def apply_game_state(_, info: GraphQLResolveInfo, newState: dict):
     user_id = info.context["user_id"]
     client: AsyncMongoClient = info.context["mongo"]
     player = next(
-        (
-            player
-            for player in game.players
-            if player.id == user_id and player.role == game.currentPlayer
-        ),
+        (player for player in game.players if player.id == user_id),
         None,
     )
 

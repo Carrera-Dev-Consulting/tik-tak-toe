@@ -42,7 +42,7 @@ export default function LobbyCreateComponent() {
         className="w-1/2 h-full mx-auto flex flex-col p-5 gap-5 min-w-full"
       >
         {error && (
-          <p className="text-red-500 text-2xl border bg-black">{error}</p>
+          <p className="text-red-500 text-2xl border border-white rounded bg-black p-5 mx-auto">{error}</p>
         )}
         <div className="flex flex-row mx-auto w-fit border rounded p-5 gap-3 ">
           <p className="my-auto">Player Name</p>

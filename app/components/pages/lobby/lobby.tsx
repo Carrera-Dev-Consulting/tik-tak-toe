@@ -90,12 +90,12 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
         {
           Object.entries(playersByRole).map(([role, players]) => {
             return (
-              <div key={role} className="flex flex-col gap-2">
-                <span className="font-bold text-xl mx-auto">{role}</span>
-                <div className="flex flex-col gap-2">
+              <div key={role} className="flex flex-col gap-2 flex-1">
+                <span className="font-bold text-3xl mx-auto">{role}</span>
+                <div className="flex flex-col gap-2 mx-auto">
                   {players.map((player) => {
                     return (
-                      <span key={player.id + player.role} className="text-sm">
+                      <span key={player.id + player.role} className="text-2xl">
                         {player.name}
                       </span>
                     );

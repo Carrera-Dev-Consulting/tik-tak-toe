@@ -18,9 +18,10 @@ const CHECK_IMAGE: Record<string, string | undefined> = {
 
 export interface GameComponentProps extends Partial<GameState> {
     identity?: PlayerRole;
+    resetDisabled?: boolean;
 
     onReset?: () => boolean;
-    onClick?: (index: number) => void;
+    onClick?: (index: number) => Promise<void>;
 }
 
 export default function GameComponent({
@@ -29,6 +30,7 @@ export default function GameComponent({
     winner: winnerProp,
     gameOver: gameOverProp,
     identity,
+    resetDisabled = false,
     onClick,
     onReset,
 }: GameComponentProps) {
@@ -42,6 +44,7 @@ export default function GameComponent({
         winnerProp || undefined,
     );
     const [gameOver, setGameOver] = useState<boolean>(gameOverProp || false);
+    const [showModal, setShowModal] = useState<boolean>(false);
 
     // Rerender if props change....
     useEffect(() => {
@@ -49,10 +52,11 @@ export default function GameComponent({
         setCurrentPlayer(currentPlayerProp || PlayerRole.X);
         setWinner(winnerProp || undefined);
         setGameOver(gameOverProp || false);
+        setShowModal(false || gameOverProp || false);
     }, [boardProp, currentPlayerProp, winnerProp, gameOverProp, identity]);
 
     const reset = () => {
-        let applyReset: boolean = true;
+        let applyReset: boolean = !resetDisabled;
         if (onReset) {
             applyReset = onReset();
         }
@@ -69,6 +73,7 @@ export default function GameComponent({
         setBoard(Array(9).fill(null));
         setCurrentPlayer(PlayerRole.X);
         setWinner(undefined);
+        setShowModal(false);
         setGameOver(false);
 
         try {
@@ -86,24 +91,26 @@ export default function GameComponent({
         <BasePage>
             <h2 className="text-xl font-bold">Tik Tak Toe</h2>
             <h3>Current Player: {PLAYER_MAPPER[currentPlayer]}</h3>
-            <button
-                className="font-bold p-4 border w-1/4 m-auto my-5 hover:cursor-pointer hover:bg-gray-500 hover:text-white"
-                onClick={() => {
-                    reset();
-                }}
-            >
-                Reset Board
-            </button>
+            {
+                !resetDisabled && <button
+                    className="font-bold p-4 border w-1/4 m-auto my-5 hover:cursor-pointer hover:bg-gray-500 hover:text-white"
+                    onClick={() => {
+                        reset();
+                    }}
+                >
+                    Reset Board
+                </button>
+            }
             <div className="flex flex-row flex-wrap gap-5 w-1/2 m-auto">
                 {board.map((item, index) => (
                     <div
                         key={index}
                         className={
-                            (item !== null ? "" : "hover:cursor-pointer hover:bg-red-400") +
+                            (item !== null || identity && identity !== currentPlayer ? "" : "hover:cursor-pointer hover:bg-red-400") +
                             " " +
                             "bg-slate-400 flex-1  basis-[30%]  aspect-square flex justify-center items-center text-2xl font-bold"
                         }
-                        onClick={() => {
+                        onClick={async () => {
                             // Can't double check a board
                             if (item) return;
                             // Check if we have assigned you a specific player and its your turn
@@ -119,6 +126,7 @@ export default function GameComponent({
                             const result = calculateWinner(newBoard);
                             if (result.winner) {
                                 setWinner(result.winner);
+                                setShowModal(true);
                             }
                             if (result.ended) {
                                 setGameOver(result.ended);
@@ -129,7 +137,7 @@ export default function GameComponent({
                             setWinner(result.winner);
                             setGameOver(result.ended);
                             try {
-                                onClick?.(index);
+                                onClick && (await onClick?.(index));
                             } catch (e) {
                                 console.error(e);
                                 setBoard(oldBoard);
@@ -145,7 +153,9 @@ export default function GameComponent({
                     </div>
                 ))}
             </div>
-            <Modal display={gameOver} onClose={reset}>
+            <Modal display={showModal} onClose={() => {
+                setShowModal(false);
+            }}>
                 <h2 className="text-2xl font-bold w-fit p-5 m-auto">
                     {winner ? `${PLAYER_MAPPER[winner]} won!` : "Tie!"}
                 </h2>
