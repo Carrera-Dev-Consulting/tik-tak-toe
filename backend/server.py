@@ -288,9 +288,7 @@ async def join_game(
     if game is None:
         return {"errors": ["Game does not exist!"]}
 
-    if player_obj.id in [
-        player.id for player in game.players if player.role == player_obj.role
-    ]:
+    if player_obj.id in [player.id for player in game.players]:
         return {"errors": ["Player already in game!"]}
 
     # TODO: Consider if we want to allow players to join after game is over in case of reset...

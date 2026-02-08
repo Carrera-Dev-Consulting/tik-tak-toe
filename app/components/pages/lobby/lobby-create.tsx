@@ -29,7 +29,7 @@ export default function LobbyCreateComponent() {
       return;
     }
 
-    await navigate(`/lobby/${newGameId}`, {
+    await navigate(`/lobby/wait/${newGameId}`, {
       replace: true,
     });
   };

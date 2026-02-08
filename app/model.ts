@@ -1,8 +1,7 @@
 export type Board = (null | PlayerRole)[];
 
-export interface Game {
-  id: ID;
-  currentPlayer: Player;
+export interface Game extends GameState {
+  players: Player[];
 }
 
 export interface Player {
@@ -19,7 +18,7 @@ export interface GameState {
   id?: ID;
   board: Board;
   currentPlayer: PlayerRole;
-  winner: string | undefined;
+  winner: PlayerRole | undefined;
   gameOver: boolean;
 }
 
