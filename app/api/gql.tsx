@@ -84,6 +84,16 @@ const ME = gql`
   }
 `;
 
+const SUBSCRIBE_LOBBY = gql`
+  subscription SubscribeToUpdates($gameId: ID!) {
+    lobbyUpdate(gameId: $gameId) {
+      id
+      role
+      name
+    }
+  }
+`;
+
 interface GameResponse {
   game?: Game;
 }
@@ -309,7 +319,7 @@ export class GQLAPI implements TikTakAPI {
     onError?: (error: Error) => void,
   ): () => void {
     const obs = this.apollo.subscribe<LobbyUpdateSubscription>({
-      query: SUBSCRIBE_GAME,
+      query: SUBSCRIBE_LOBBY,
       variables: { gameId: id },
     });
 
