@@ -130,6 +130,7 @@ export default function GameComponent({
                             }
                             if (result.ended) {
                                 setGameOver(result.ended);
+                                setShowModal(true);
                             }
                             setCurrentPlayer(
                                 currentPlayer === PlayerRole.X ? PlayerRole.O : PlayerRole.X,
