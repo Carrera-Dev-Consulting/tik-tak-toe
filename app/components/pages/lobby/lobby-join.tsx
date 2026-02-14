@@ -75,6 +75,7 @@ export default function JoinLobbyComponent({ gameId: gameIdProp }: JoinLobbyComp
         </div>
         <div className="flex flex-row mx-auto w-fit p-5 gap-3">
           <p className="my-auto">Select Role</p>
+          Hi
           <select
             className=" p-1 w-auto"
             value={role}
