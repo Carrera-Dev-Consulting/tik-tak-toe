@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import BasePage from "./base";
 import { Modal } from "../modal";
-import { PlayerRole, type GameState } from "~/model";
+import { PlayerRole, type GameState, type Player } from "~/model";
 import { hasGameEnded as calculateWinner } from "~/game";
 
 const PLAYER_MAPPER: Record<PlayerRole | string, string | undefined> = {
@@ -19,9 +19,18 @@ const CHECK_IMAGE: Record<string, string | undefined> = {
 export interface GameComponentProps extends Partial<GameState> {
     identity?: PlayerRole;
     resetDisabled?: boolean;
+    players?: Player[];
 
     onReset?: () => boolean;
     onClick?: (index: number) => Promise<void>;
+}
+
+function getPlayerName(currentPlayer: PlayerRole, players: Player[]): string {
+    if (players.length > 0){
+        const currentPlayers = players.filter((player) => player.role === currentPlayer);
+        return currentPlayers.map((p) => p.name).join(", ") || "Unknown Player";
+    }
+    return PLAYER_MAPPER[currentPlayer] || "Unknown Player";
 }
 
 export default function GameComponent({
@@ -29,6 +38,7 @@ export default function GameComponent({
     currentPlayer: currentPlayerProp,
     winner: winnerProp,
     gameOver: gameOverProp,
+    players: playersProp,
     identity,
     resetDisabled = false,
     onClick,
@@ -45,6 +55,7 @@ export default function GameComponent({
     );
     const [gameOver, setGameOver] = useState<boolean>(gameOverProp || false);
     const [showModal, setShowModal] = useState<boolean>(false);
+    const [players, setPlayers] = useState<Player[]>(playersProp || []);
 
     // Rerender if props change....
     useEffect(() => {
@@ -53,7 +64,8 @@ export default function GameComponent({
         setWinner(winnerProp || undefined);
         setGameOver(gameOverProp || false);
         setShowModal(false || gameOverProp || false);
-    }, [boardProp, currentPlayerProp, winnerProp, gameOverProp, identity]);
+        setPlayers(playersProp || []);
+    }, [boardProp, currentPlayerProp, winnerProp, gameOverProp, identity, playersProp]);
 
     const reset = () => {
         let applyReset: boolean = !resetDisabled;
@@ -90,7 +102,7 @@ export default function GameComponent({
     return (
         <BasePage>
             <h2 className="text-xl font-bold">Tik Tak Toe</h2>
-            <h3>Current Player: {PLAYER_MAPPER[currentPlayer]}</h3>
+            <h3>Current Player: {getPlayerName(currentPlayer, players)}</h3>
             {
                 !resetDisabled && <button
                     className="font-bold p-4 border w-1/4 m-auto my-5 hover:cursor-pointer hover:bg-gray-500 hover:text-white"
@@ -101,7 +113,7 @@ export default function GameComponent({
                     Reset Board
                 </button>
             }
-            <div className="flex flex-row flex-wrap gap-5 w-1/2 m-auto">
+            <div className="flex flex-row flex-wrap gap-5 md:w-1/2 m-auto sm:w-2/3 w-full">
                 {board.map((item, index) => (
                     <div
                         key={index}

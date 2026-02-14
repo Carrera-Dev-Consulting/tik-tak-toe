@@ -88,7 +88,7 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
     }
 
     return (
-        <GameComponent identity={role} {...gameState} onClick={async (index) => {
+        <GameComponent identity={role} {...gameState} players={game?.players} onClick={async (index) => {
             await api.selectSquare(gameId, index);
         }} resetDisabled />
     );

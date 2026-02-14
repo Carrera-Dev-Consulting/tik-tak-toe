@@ -48,7 +48,11 @@ const JOIN_GAME = gql`
       errors
       game {
         id
-        players
+        players {
+          id
+          role
+          name
+        }
       }
     }
   }
