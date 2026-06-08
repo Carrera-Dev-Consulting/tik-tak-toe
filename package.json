@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "tik-tak-toe",
   "private": true,
   "type": "module",
   "scripts": {
