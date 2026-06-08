@@ -1,194 +1,33 @@
-from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from enum import Enum
 import json
-from logging import getLogger
 import os
-from typing import Any
 import uuid
-from bson import ObjectId
-from fastapi import FastAPI, Request
-from ariadne.asgi import GraphQL
-from ariadne.asgi.handlers import GraphQLTransportWSHandler
+
 from ariadne import (
+    EnumType,
     MutationType,
+    QueryType,
     SubscriptionType,
     load_schema_from_path,
     make_executable_schema,
-    EnumType,
-    QueryType,
-    InputType,
 )
-from ariadne.types import GraphQLResolveInfo
 from broadcaster import Broadcast, Event
-from pydantic import AliasChoices, BaseModel, Field, field_validator
-from pydantic_settings import BaseSettings
+from bson import ObjectId
+from fastapi import Request
+from graphql import GraphQLResolveInfo
 from pymongo import AsyncMongoClient
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
+from ariadne.asgi import GraphQL
+from ariadne.asgi.handlers import GraphQLTransportWSHandler
 
+from .models import Game, GameStateInput, Player, PlayerRole
+from .config import settings
 
-logger = getLogger(__name__)
-
-
-class LogFormatters(str, Enum):
-    default = "default"
-    json = "json"
-    pretty = "pretty"
-
-
-formatters = {
-    LogFormatters.default: "uvicorn.logging.DefaultFormatter",
-    LogFormatters.json: "pythonjsonlogger.json.JsonFormatter",
-    LogFormatters.pretty: "colorlog.ColoredFormatter",
-}
-formats = {
-    "colorlog.ColoredFormatter": "%(log_color)s%(asctime)s :: %(levelname)s :: %(name)s :: %(funcName)s :: %(lineno)d :: %(message)s"
-}
-
-
-class Settings(BaseSettings):
-    redis_url: str = "redis://localhost:6379/0"
-    mongo_url: str = "mongodb://localhost:27017"
-
-    cors_origins: list = ["*"]
-    cors_headers: list = ["*"]
-    cors_methods: list = ["*"]
-
-    games_database: str = "games"
-    games_collection: str = "tiktaktoe"
-
-    session_secret: str = "super-secret-key-idle"
-    max_session_age: int = 14 * 24 * 60 * 60  # 14 days
-
-    host: str = "0.0.0.0"
-    port: int = 8000
-    reload: bool = False
-
-    log_formatter: str = "uvicorn.logging.DefaultFormatter"
-    log_level: str = "INFO"
-    uvicorn_log_level: str = "INFO"
-
-    @property
-    def log_format(self) -> str:
-        logger.info("Parsing log format: %s", self.log_formatter)
-        return formatters.get(
-            self.log_formatter,
-            "%(asctime)s :: %(levelname)s :: %(name)s :: %(funcName)s :: %(lineno)d :: %(message)s",
-        )
-
-    @field_validator(
-        "log_level",
-        "uvicorn_log_level",
-        mode="before",
-    )
-    @classmethod
-    def parse_log_level(cls, value: Any) -> str:
-        if isinstance(value, str):
-            return value.upper()
-        return value
-
-    @field_validator(
-        "log_formatter",
-        mode="before",
-    )
-    @classmethod
-    def parse_log_formatter(cls, value: Any) -> str:
-        logger.info("Parsing log formatter: %s", value)
-        return formatters.get(value, value)
-
-    @field_validator(
-        "cors_origins",
-        "cors_headers",
-        "cors_methods",
-        mode="before",
-    )
-    @classmethod
-    def parse_string(cls, value: Any) -> str:
-        if isinstance(value, str):
-            return [v.strip() for v in value.split(",")]
-
-        return value
-
-
-settings = Settings()
 
 broadcast = Broadcast(
     settings.redis_url,
 )
 
 client: ContextVar[AsyncMongoClient] = ContextVar("client", default=None)
-
-
-class PlayerRole(str, Enum):
-    X = "X"
-    O = "O"
-
-
-class GameStateInput(BaseModel):
-    id: str
-    index: int
-
-
-class GameState(BaseModel):
-    id: str
-    currentPlayer: PlayerRole
-    board: list[PlayerRole | None]
-    winner: PlayerRole
-    gameOver: bool
-
-
-class Player(BaseModel):
-    id: str = Field(
-        validation_alias=AliasChoices("id", "_id"),
-        default_factory=uuid.uuid4,
-    )
-    role: PlayerRole
-    name: str
-
-
-class Game(BaseModel):
-    id: str = Field(validation_alias=AliasChoices("id", "_id"), alias="_id")
-    players: list[Player]
-    currentPlayer: PlayerRole = PlayerRole.X
-    winner: PlayerRole | None = None
-    gameOver: bool = False
-    # Default to a 3x3 board
-    board: list[PlayerRole | None] = Field(default_factory=lambda: [None] * 9)
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def validate_id(cls, value: Any):
-        return str(value)
-
-    @property
-    def is_ready(self):
-        values = {role: 0 for role in PlayerRole}
-
-        for player in self.players:
-            values[player.role] += 1
-
-        # Must have at least one player of each role
-        return all(value > 0 for value in values.values())
-
-    def checkGameOver(self):
-        for row in [
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [0, 3, 6],
-            [1, 4, 7],
-            [2, 5, 8],
-            [0, 4, 8],
-            [2, 4, 6],
-        ]:
-            if self.board[row[0]] == self.board[row[1]] == self.board[row[2]] != None:
-                self.winner = self.board[row[0]]
-                self.gameOver = True
-
-        if self.board.count(None) == 0:
-            self.gameOver = True
-
 
 query = QueryType()
 
@@ -418,7 +257,9 @@ def session_update(message: list[dict], info: GraphQLResolveInfo, gameId: str):
     return message
 
 
-schema = load_schema_from_path(os.path.join(os.path.dirname(__file__), "schema.gql"))
+schema = load_schema_from_path(
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "schema.gql")
+)
 
 schema_obj = make_executable_schema(
     schema,
@@ -426,49 +267,6 @@ schema_obj = make_executable_schema(
     query,
     subscription,
     mutation,
-)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    mongo_client = AsyncMongoClient(settings.mongo_url)
-    client.set(mongo_client)
-    logger.info("Connected to MongoDB")
-    await mongo_client.aconnect()
-    logger.info("Connected to broadcaster...")
-    await broadcast.connect()
-    try:
-        logger.info("Starting server...")
-        yield
-    finally:
-        logger.info("Shutting down server...")
-        logger.info("Disconnecting broadcaster...")
-        await broadcast.disconnect()
-        logger.info("Disconnecting from MongoDB...")
-        await mongo_client.aclose()
-        client.set(None)
-
-
-app = FastAPI(
-    lifespan=lifespan,
-    debug=True,
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=settings.cors_origins,
-    allow_methods=settings.cors_methods,
-    allow_headers=settings.cors_headers,
-)
-
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=settings.session_secret,
-    max_age=settings.max_session_age,
 )
 
 
@@ -498,52 +296,3 @@ gql = GraphQL(
     context_value=context_value,
     websocket_handler=GraphQLTransportWSHandler(),
 )
-
-app.mount("/graphql", gql)
-
-if __name__ == "__main__":
-    import uvicorn
-
-    logging_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "default": {
-                "()": settings.log_formatter,
-                "fmt": settings.log_format,
-                "datefmt": "%Y-%m-%d %H:%M:%S",
-            },
-        },
-        "handlers": {
-            "default": {
-                "formatter": "default",
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
-            },
-        },
-        "loggers": {
-            "": {
-                "handlers": ["default"],
-                "level": settings.log_level,
-                "propagate": True,
-            },
-            "uvicorn.error": {
-                "handlers": ["default"],
-                "level": settings.uvicorn_log_level,
-                "propagate": False,
-            },
-            "uvicorn.access": {
-                "handlers": ["default"],
-                "level": settings.uvicorn_log_level,
-                "propagate": False,
-            },
-        },
-    }
-
-    uvicorn.run(
-        "server:app",
-        host=settings.host,
-        port=settings.port,
-        log_config=logging_config,
-        reload=settings.reload,
-    )
