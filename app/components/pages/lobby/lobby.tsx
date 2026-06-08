@@ -19,6 +19,8 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [game, setGame] = useState<Game | undefined>(undefined);
   const navigate = useNavigate();
+  // Create relative url based on what we are currently hosted at.
+  const joinUrl = (new URL(`/lobby/join?gameId=${gameId}`, window.location.href)).toString();
 
   const playersByRole = useMemo(() => {
     const obj: Record<PlayerRole, Player[]> = Object.values(PlayerRole).reduce(
@@ -86,6 +88,12 @@ export default function LobbyComponent({ gameId }: LobbyComponentProps) {
       <h2 className="w-fit mx-auto my-5 text-2xl">
         {isReady ? "Game Ready to Start!!" : "Waiting for players..."}
       </h2>
+      <button onClick={() => {
+        navigator.clipboard.writeText(joinUrl);
+        alert("Copied to clipboard");
+      }}
+        className="border disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed  hover:cursor-pointer rounded p-5 w-fit mx-auto my-5 hover:bg-black hover:text-white"
+      >Click to copy join link</button>
       <div className="flex flex-row flex-wrap gap-50 border min-h-20 w-1/2 mx-auto mb-5 rounded p-5">
         {
           Object.entries(playersByRole).map(([role, players]) => {

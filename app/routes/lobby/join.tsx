@@ -1,4 +1,4 @@
-import { useParams } from "react-router";
+import { useSearchParams } from "react-router";
 import type { Route } from "./+types/create";
 import JoinLobbyComponent from "~/components/pages/lobby/lobby-join";
 import type { ID } from "~/model";
@@ -14,6 +14,7 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export default function Join() {
-    const { gameId } = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const gameId = searchParams.get("gameId");
     return <JoinLobbyComponent gameId={gameId as ID} />;
 }
